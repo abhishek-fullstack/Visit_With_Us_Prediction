@@ -7,7 +7,7 @@ import joblib
 model_path = hf_hub_download(repo_id="aks2022/Visit-With-Us-Prediction-Model", filename="best_visitwithus_prediction_model_v1.joblib")
 model = joblib.load(model_path)
 
-Download and load label encoders
+# Download and load label encoders
 categorical_features = ['TypeofContact', 'Occupation', 'Gender', 'ProductPitched', 'MaritalStatus', 'Designation']
 label_encoders = {}
 for column in categorical_features:
