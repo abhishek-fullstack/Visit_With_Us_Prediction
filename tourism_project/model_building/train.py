@@ -34,9 +34,29 @@ except RepositoryNotFoundError:
     create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
     print(f"Space '{repo_id}' created.")
 
+# Load the raw dataset to fit LabelEncoders on original categorical values
+DATASET_PATH = "hf://datasets/aks2022/Visit-With-Us-Prediction/tourism.csv"
+df_raw = pd.read_csv(DATASET_PATH)
+print("Raw dataset loaded successfully.")
 
+# Define categorical features
+categorical_features = ['TypeofContact', 'Occupation', 'Gender', 'ProductPitched', 'MaritalStatus', 'Designation']
 
+# Initialize and fit LabelEncoders on raw categorical data
+label_encoders = {}
+for column in categorical_features:
+    label_encoder = LabelEncoder()
+    label_encoder.fit(df_raw[column])  # Fit on raw categorical data
+    label_encoders[column] = label_encoder
+    joblib.dump(label_encoder, f"{column}_encoder.joblib")  # Save each encoder
+    api.upload_file(
+        path_or_fileobj=f"{column}_encoder.joblib",
+        path_in_repo=f"{column}_encoder.joblib",
+        repo_id="aks2022/Visit-With-Us-Prediction-Model",
+        repo_type="model",
+    )
 
+# Load preprocessed datasets
 Xtrain_path = "hf://datasets/aks2022/Visit-With-Us-Prediction/Xtrain.csv"
 Xtest_path = "hf://datasets/aks2022/Visit-With-Us-Prediction/Xtest.csv"
 ytrain_path = "hf://datasets/aks2022/Visit-With-Us-Prediction/ytrain.csv"
@@ -47,22 +67,10 @@ Xtest = pd.read_csv(Xtest_path)
 ytrain = pd.read_csv(ytrain_path)
 ytest = pd.read_csv(ytest_path)
 
-# Encoding the categorical  columns
-categorical_features = ['TypeofContact', 'Occupation', 'Gender', 'ProductPitched', 'MaritalStatus', 'Designation']
-# Apply LabelEncoder to each column and save the same
-label_encoders = {}
+# Apply saved LabelEncoders to transform categorical features
 for column in categorical_features:
-    label_encoder = LabelEncoder()
-    Xtrain[column] = label_encoder.fit_transform(Xtrain[column])
-    Xtest[column] = label_encoder.transform(Xtest[column])
-    label_encoders[column] = label_encoder
-    joblib.dump(label_encoder, f"{column}_encoder.joblib")  # Save each encoder
-    api.upload_file(
-        path_or_fileobj=f"{column}_encoder.joblib",
-        path_in_repo=f"{column}_encoder.joblib",
-        repo_id="aks2022/Visit-With-Us-Prediction-Model",
-        repo_type="model",
-    )
+    Xtrain[column] = label_encoders[column].transform(Xtrain[column])
+    Xtest[column] = label_encoders[column].transform(Xtest[column])
 
 # One-hot encode 'Type' and scale numeric features
 numerical_features = [
@@ -70,13 +78,13 @@ numerical_features = [
     'NumberOfTrips', 'PitchSatisfactionScore', 'NumberOfChildrenVisiting', 'MonthlyIncome'
 ]
 
-# Set the clas weight to handle class imbalance
+# Set the class weight to handle class imbalance
 class_weight = ytrain.value_counts()[0] / ytrain.value_counts()[1]
-class_weight
 
 # Define the preprocessing steps
 preprocessor = make_column_transformer(
-    (StandardScaler(), numerical_features))
+    (StandardScaler(), numerical_features)
+)
 
 # Define base XGBoost model
 xgb_model = xgb.XGBClassifier(scale_pos_weight=class_weight, random_state=42)
@@ -150,7 +158,6 @@ with mlflow.start_run():
     mlflow.log_artifact(model_path, artifact_path="model")
     print(f"Model saved as artifact at: {model_path}")
 
-    # create_repo("churn-model", repo_type="model", private=False)
     api.upload_file(
         path_or_fileobj="best_visitwithus_prediction_model_v1.joblib",
         path_in_repo="best_visitwithus_prediction_model_v1.joblib",
