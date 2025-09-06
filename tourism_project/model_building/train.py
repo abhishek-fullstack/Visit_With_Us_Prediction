@@ -20,6 +20,19 @@ import mlflow
 mlflow.set_tracking_uri("http://localhost:5000")
 mlflow.set_experiment("VisitWithUs_MLOps_Experiment")
 
+# Upload to Hugging Face
+repo_id = "aks2022/Visit-With-Us-Prediction-Model"
+repo_type = "model"
+
+# Step 1: Check if the space exists
+try:
+    api.repo_info(repo_id=repo_id, repo_type=repo_type)
+    print(f"Space '{repo_id}' already exists. Using it.")
+except RepositoryNotFoundError:
+    print(f"Space '{repo_id}' not found. Creating new space...")
+    create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
+    print(f"Space '{repo_id}' created.")
+
 api = HfApi()
 
 
@@ -135,19 +148,6 @@ with mlflow.start_run():
     # Log the model artifact
     mlflow.log_artifact(model_path, artifact_path="model")
     print(f"Model saved as artifact at: {model_path}")
-
-    # Upload to Hugging Face
-    repo_id = "aks2022/Visit-With-Us-Prediction-Model"
-    repo_type = "model"
-
-    # Step 1: Check if the space exists
-    try:
-        api.repo_info(repo_id=repo_id, repo_type=repo_type)
-        print(f"Space '{repo_id}' already exists. Using it.")
-    except RepositoryNotFoundError:
-        print(f"Space '{repo_id}' not found. Creating new space...")
-        create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
-        print(f"Space '{repo_id}' created.")
 
     # create_repo("churn-model", repo_type="model", private=False)
     api.upload_file(
