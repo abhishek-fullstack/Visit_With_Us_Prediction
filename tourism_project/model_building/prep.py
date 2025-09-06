@@ -22,16 +22,6 @@ df.drop(columns=['CustomerID'], inplace=True)
 # Standardize Gender column to fix "Fe Male" vs "Female" issue
 df['Gender'] = df['Gender'].replace('Fe Male', 'Female')
 
-# Encoding the categorical  columns
-columns_to_encode = ['TypeofContact', 'Occupation', 'Gender', 'ProductPitched', 'MaritalStatus', 'Designation']  # Replace with your actual column names
-
-# Initialize LabelEncoder
-label_encoder = LabelEncoder()
-
-# Apply LabelEncoder to each column
-for column in columns_to_encode:
-    df[column] = label_encoder.fit_transform(df[column])
-
 target_col = 'ProdTaken'
 
 # Split into X (features) and y (target)
